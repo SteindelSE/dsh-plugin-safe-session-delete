@@ -32,6 +32,11 @@ every layer. A durable intent marker enables crash-safe recovery.
 dsh plugin --profile web add https://github.com/SteindelSE/dsh-plugin-safe-session-delete
 ```
 
+Then refresh the browser. The **Delete session** button, sidebar
+command, and dialog overlay appear once the cordis loader picks
+up the new bundle. See [Installation](#installation) for the
+full GUI and CLI workflows.
+
 ---
 
 ## What this plugin provides (v1.0.0)
@@ -177,18 +182,12 @@ plausible implementation that would address it.
 ## Installation
 
 The plugin follows the cordis bundle rule: it ships as a local
-package with a self-contained `cordis.patch.yml` that mounts the
-plugin's own `src/index.js`. After the package is installed, the
-bundle loader reads `./cordis.patch.yml` from inside the
-package and resolves its `name:` field relative to that file —
-which means the install is **location-independent** and works
-regardless of where the plugin was cloned, installed, or
-unzipped on your machine.
-
-A `postinstall` script registers the package name in the parent
-profile's `dsh.profile.bundles` array, so no manual `package.json`
-editing is required once pnpm is allowed to run the script (one-time,
-per profile).
+package with a self-contained `cordis.patch.yml` that mounts
+the plugin's own `src/index.js`. The client bundle
+(`src/client.js`) is prebuilt and committed, so the install
+path has no build step and no lifecycle script. The plugin
+has **no** `prepare`, `postinstall`, or `install` script —
+pnpm will not block the install on build approval.
 
 ### One-command install (recommended)
 
@@ -199,11 +198,11 @@ plugin**, and paste a GitHub URL or local path:
 https://github.com/SteindelSE/dsh-plugin-safe-session-delete
 ```
 
-The UI prompts you to approve the build script the first time,
-runs `pnpm add`, lets the `postinstall` hook register the
-bundle, and reloads the profile. Refresh the browser once and
-the **Delete session** button, sidebar command, and dialog
-overlay are live.
+The UI runs `pnpm add`, calls `installBundle` which
+auto-registers the package in `dsh.profile.bundles`, and
+reloads the profile. Refresh the browser once and the
+**Delete session** button, sidebar command, and dialog
+overlay are live. This is a true one-click path.
 
 ### CLI install
 
@@ -217,19 +216,38 @@ dsh plugin --profile <name> add file:/absolute/path/to/dsh-plugin-safe-session-d
 dsh plugin --profile <name> add https://github.com/SteindelSE/dsh-plugin-safe-session-delete
 ```
 
-pnpm 10+ blocks lifecycle scripts for non-registry dependencies
-by default, so the first run aborts with `ERR_PNPM_IGNORED_BUILDS`.
-Approve the build and re-run:
+> **Heads up:** the `dsh plugin` CLI is a passthrough to pnpm.
+> It installs the package but does **not** add the bundle to
+> `dsh.profile.bundles`. The GUI path does this automatically
+> (via `installBundle` → `selectBundle`); the CLI path does not.
+> This is a DSH CLI behavior, not a plugin behavior — the same
+> gap applies to any third-party bundle installed via
+> `dsh plugin add`.
+
+After the CLI install, add the bundle to the profile's
+`package.json` and restart the profile:
 
 ```sh
-pnpm --dir ~/.dsh/profiles/<name> approve-builds
-dsh plugin --profile <name> add https://github.com/SteindelSE/dsh-plugin-safe-session-delete
-```
+# 1. Confirm the package is in dependencies
+grep '"dsh-plugin-safe-session-delete"' ~/.dsh/profiles/<name>/package.json
 
-The second run executes the `postinstall` hook, which writes
-the package name into `~/.dsh/profiles/<name>/package.json`'s
-`dsh.profile.bundles` array. Refresh the browser and the plugin
-is active.
+# 2. Add the name to dsh.profile.bundles
+node -e '
+  const fs = require("fs");
+  const path = process.env.DSH_PROFILE_PKG || process.argv[1];
+  const pkg = JSON.parse(fs.readFileSync(path, "utf8"));
+  pkg.dsh = pkg.dsh || {};
+  pkg.dsh.profile = pkg.dsh.profile || {};
+  pkg.dsh.profile.bundles = pkg.dsh.profile.bundles || [];
+  if (!pkg.dsh.profile.bundles.includes("dsh-plugin-safe-session-delete")) {
+    pkg.dsh.profile.bundles.push("dsh-plugin-safe-session-delete");
+  }
+  fs.writeFileSync(path, JSON.stringify(pkg, null, 2) + "\n");
+' ~/.dsh/profiles/<name>/package.json
+
+# 3. Restart dsh web (or your Desktop client) so the cordis
+#    loader picks up the new bundle entry.
+```
 
 ### Verifying the install
 
@@ -247,11 +265,33 @@ is active.
    # should list "dsh-plugin-safe-session-delete"
    ```
 
-3. Restart the profile if it was already running before the
-   install (`dsh web` or your Desktop client). The plugin
-   loads through the cordis loader, registers its host-side
-   tool, and the bundled client mounts the header button,
-   sidebar menu item, and dialog overlay on the first render.
+3. The plugin loads through the cordis loader, registers its
+   host-side tool, and the bundled client mounts the header
+   button, sidebar menu item, and dialog overlay on the
+   first render.
+
+### If pnpm blocks the install with `ERR_PNPM_IGNORED_BUILDS`
+
+This plugin has no lifecycle scripts, so pnpm should not
+block the install. If a future change adds one, or if a
+transitive dependency needs build approval, pnpm 10+ will
+abort with:
+
+```text
+Ignored build scripts: dsh-plugin-safe-session-delete@<spec>
+```
+
+Approve only the exact named package (do **not** use
+`pnpm approve-builds --all` — that grants build permission
+to every pending dependency in the workspace):
+
+```sh
+# One-shot, per-install, no persistent state
+pnpm --allow-build=dsh-plugin-safe-session-delete add <spec>
+
+# Or persist the approval to the profile's pnpm-workspace.yaml
+pnpm approve-builds dsh-plugin-safe-session-delete
+```
 
 > **Do not** copy the `insert:` block out of `cordis.patch.yml`
 > into your own `~/.dsh/cordis.patch.yml`. The `name:` field is

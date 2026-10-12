@@ -24,12 +24,10 @@
   },
   "scripts": {
     "build": "node build.mjs",
-    "test": "node --test tests/",
-    "postinstall": "node scripts/register-bundle.mjs"
+    "test": "node --test tests/"
   },
   "files": [
     "src/",
-    "scripts/register-bundle.mjs",
     "build.mjs",
     "cordis.patch.yml",
     "README.md",
