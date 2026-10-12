@@ -46,7 +46,14 @@ import {
 
 export const name = 'dsh-plugin-safe-session-delete';
 
-/** Host services the plugin reads (cordis static `inject`). */
+/**
+ * Host services the plugin reads (cordis static `inject`).
+ *
+ * The dsh-cordis-host-runner wraps `apply` in a sandbox proxy that
+ * resolves declared services as `ctx.<name>`; undeclared names throw.
+ * We only consume `tools` as a property (the others are accessed via
+ * the always-available `ctx.get(...)`).
+ */
 export const inject = ['tools'];
 
 // --- active-profile resolution -------------------------------------------
@@ -68,11 +75,16 @@ function resolveProfileId(ctx) {
 
 export function apply(ctx) {
   const profileId = resolveProfileId(ctx);
+  // `ctx.get` is the only universally-available accessor in the
+  // dsh-cordis-host-runner sandbox; property reads (ctx.logger, etc.)
+  // require the service to appear in `inject`. Look everything up by
+  // name so we don't add a brittle declare-only-to-log entry.
+  const getLogger = () => (typeof ctx.get === 'function' ? ctx.get('logger') : null);
   const authorization = new AuthorizationManager({
     resolveProfileId: () => profileId,
     audit: (token, event, payload) => {
       try {
-        ctx.logger?.('dsh-plugin-safe-session-delete')?.info?.(
+        getLogger()?.('dsh-plugin-safe-session-delete')?.info?.(
           'auth:%s:%s:%s', token, event, JSON.stringify(payload || {}),
         );
       } catch { /* logger may not be ready */ }
@@ -83,7 +95,7 @@ export function apply(ctx) {
     authorization,
     audit: (event, payload) => {
       try {
-        ctx.logger?.('dsh-plugin-safe-session-delete')?.info?.(
+        getLogger()?.('dsh-plugin-safe-session-delete')?.info?.(
           'delete:%s:%s', event, JSON.stringify(payload || {}),
         );
       } catch { /* */ }
@@ -98,7 +110,7 @@ export function apply(ctx) {
       await deleteService.recoverFromIntents();
     } catch (err) {
       try {
-        ctx.logger?.('dsh-plugin-safe-session-delete')?.warn?.(
+        getLogger()?.('dsh-plugin-safe-session-delete')?.warn?.(
           'recovery:%s', err.message,
         );
       } catch { /* */ }
@@ -111,7 +123,7 @@ export function apply(ctx) {
   ctx.effect(() => installApprovalGate(ctx, {
     onDeny: (decision) => {
       try {
-        ctx.logger?.('dsh-plugin-safe-session-delete')?.info?.(
+        getLogger()?.('dsh-plugin-safe-session-delete')?.info?.(
           'denied:%s', JSON.stringify(decision),
         );
       } catch { /* */ }
