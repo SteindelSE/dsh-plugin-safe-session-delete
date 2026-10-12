@@ -178,44 +178,87 @@ plausible implementation that would address it.
 
 The plugin follows the cordis bundle rule: it ships as a local
 package with a self-contained `cordis.patch.yml` that mounts the
-plugin's own `src/index.js`. After `dsh plugin add` resolves the
-package, the bundle loader reads `./cordis.patch.yml` from inside
-the package and resolves its `name:` field relative to that
-file — which means the install is **location-independent** and
-works regardless of where the plugin was cloned, installed, or
+plugin's own `src/index.js`. After the package is installed, the
+bundle loader reads `./cordis.patch.yml` from inside the
+package and resolves its `name:` field relative to that file —
+which means the install is **location-independent** and works
+regardless of where the plugin was cloned, installed, or
 unzipped on your machine.
 
-1. Verify your installed harness version is `0.2.0-rc.2` or newer:
+A `postinstall` script registers the package name in the parent
+profile's `dsh.profile.bundles` array, so no manual `package.json`
+editing is required once pnpm is allowed to run the script (one-time,
+per profile).
+
+### One-command install (recommended)
+
+Open the DSH web UI, go to **Settings → Plugins**, click **Add
+plugin**, and paste a GitHub URL or local path:
+
+```text
+https://github.com/SteindelSE/dsh-plugin-safe-session-delete
+```
+
+The UI prompts you to approve the build script the first time,
+runs `pnpm add`, lets the `postinstall` hook register the
+bundle, and reloads the profile. Refresh the browser once and
+the **Delete session** button, sidebar command, and dialog
+overlay are live.
+
+### CLI install
+
+The same package installs from the command line:
+
+```sh
+# from a local clone
+dsh plugin --profile <name> add file:/absolute/path/to/dsh-plugin-safe-session-delete
+
+# directly from GitHub
+dsh plugin --profile <name> add https://github.com/SteindelSE/dsh-plugin-safe-session-delete
+```
+
+pnpm 10+ blocks lifecycle scripts for non-registry dependencies
+by default, so the first run aborts with `ERR_PNPM_IGNORED_BUILDS`.
+Approve the build and re-run:
+
+```sh
+pnpm --dir ~/.dsh/profiles/<name> approve-builds
+dsh plugin --profile <name> add https://github.com/SteindelSE/dsh-plugin-safe-session-delete
+```
+
+The second run executes the `postinstall` hook, which writes
+the package name into `~/.dsh/profiles/<name>/package.json`'s
+`dsh.profile.bundles` array. Refresh the browser and the plugin
+is active.
+
+### Verifying the install
+
+1. Confirm your installed harness version is `0.2.0-rc.2` or
+   newer:
 
    ```sh
    dsh --version
    ```
 
-2. **Install via the standard local-package pattern.** This works
-   for a local checkout, a tarball, or a git URL:
+2. Confirm the bundle is registered:
 
    ```sh
-   # from a local clone
-   dsh plugin --profile <profile> add file:/absolute/path/to/dsh-plugin-safe-session-delete
-
-   # directly from GitHub
-   dsh plugin --profile <profile> add https://github.com/SteindelSE/dsh-plugin-safe-session-delete
+   grep -A1 '"bundles"' ~/.dsh/profiles/<name>/package.json
+   # should list "dsh-plugin-safe-session-delete"
    ```
 
-   The `cordis.patch.yml` ships inside the package; do **not**
-   modify it after install. If you want to override the patch,
-   prefer `dsh plugin update` over editing files in place.
-
-3. Restart the profile (`dsh web` or your Desktop client). The
-   plugin loads through the cordis loader, registers its host-side
-   tool, and the bundled client mounts the header button, sidebar
-   menu item, and dialog overlay on the first render.
+3. Restart the profile if it was already running before the
+   install (`dsh web` or your Desktop client). The plugin
+   loads through the cordis loader, registers its host-side
+   tool, and the bundled client mounts the header button,
+   sidebar menu item, and dialog overlay on the first render.
 
 > **Do not** copy the `insert:` block out of `cordis.patch.yml`
 > into your own `~/.dsh/cordis.patch.yml`. The `name:` field is
 > a path relative to the patch file. It only resolves correctly
 > when the bundle loader reads the patch from inside the
-> installed plugin directory. Use `dsh plugin add` instead.
+> installed plugin directory. Use the dsh plugin install path
+> instead.
 
 ## Uninstall
 
