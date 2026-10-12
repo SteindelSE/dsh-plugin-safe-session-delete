@@ -1,0 +1,21 @@
+# dsh-plugin-safe-session-delete
+# Hosts `dsh-plugin-safe-session-delete` so the DeepSeek Harness profiles mount
+# it as an ordinary cordis plugin (no core patches). The plugin registers:
+#   - the `workbench_session_delete` agent tool with mandatory trusted-user
+#     approval (no silent model-driven deletion);
+#   - the session-header delete button and the sidebar "..." menu entry on the
+#     client side (verified authoritative session ID).
+#
+# The plugin fiber owns its registrations (ctx.effect / disposers) so disabling,
+# updating, or uninstalling the plugin is a clean uninstall without any patches
+# left behind in the application.
+#
+# `name:` is a path RELATIVE TO THIS FILE. After `dsh plugin add`, the bundle
+# loader places this patch inside the package's install directory and resolves
+# `./src/index.js` against that directory, regardless of where the plugin was
+# installed on disk. Do not change `./src/index.js` to an absolute path; doing
+# so will break the install for anyone who did not install to your path.
+
+- insert:
+    - id: dsh-plugin-safe-session-delete
+      name: ./src/index.js

@@ -1,0 +1,74 @@
+# ----- dependencies ----------------------------------------------------
+node_modules/
+.pnp/
+.pnp.js
+
+# ----- build output -----------------------------------------------------
+dist/
+build/
+*.tsbuildinfo
+
+# The client bundle (src/client.js) is a build artifact produced by
+# `node build.mjs`. It IS tracked because the harness reads it from
+# the installed package on every profile boot; the `prepare` script
+# regenerates it locally and on disk before each commit so the
+# checked-in copy always matches the current source.
+
+# ----- logs and runtime artifacts -------------------------------------
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.pid.lock
+store.lock
+
+# ----- editor and OS files ---------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+.AppleDouble
+.LSOverride
+*~
+*.swp
+*.swo
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# ----- env and credentials ---------------------------------------------
+.env
+.env.*
+.envrc
+.secrets
+*.pem
+!.gitignore
+!.dockerignore
+
+# ----- test artifacts ---------------------------------------------------
+coverage/
+.nyc_output/
+*.lcov
+junit-*.xml
+test-results/
+artifacts/
+
+# ----- tmp and scratch -------------------------------------------------
+tmp/
+.tmp/
+*.tmp
+*.bak
+*.orig
+*.rej
+
+# ----- development-only files -------------------------------------------
+# The full project history and design notes — not part of the released plugin.
+FINAL_REPORT.md
+docs/dev-notes/
+scratch/

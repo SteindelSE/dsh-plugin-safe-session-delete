@@ -1,0 +1,63 @@
+{
+  "name": "dsh-plugin-safe-session-delete",
+  "version": "1.0.0",
+  "description": "DeepSeek Harness plugin that adds safe, auditable, permanent session deletion. Resolves sessions by authoritative id only, refuses wrong-sessions on every filesystem boundary (no symlinks, no traversal, no race conditions), and requires trusted, single-use user authorization for every deletion — including agent-initiated requests.",
+  "longDescription": "dsh-plugin-safe-session-delete adds a header delete button, a sidebar row menu entry, and the workbench_session_delete agent tool to a DeepSeek Harness profile. Every entry point routes through one transactional deletion service that runs as a verified state machine (VALIDATED → AUTHORIZED → LOCKED → QUIESCED → PREPARED → RETIRED → METADATA_UPDATED → PERSISTENCE_PURGED → VERIFIED) and refuses to report success until the target session id is provably absent from every layer. A durable intent marker enables crash-safe recovery. 87 tests cover identity resolution, authorization semantics, filesystem boundaries, agent lifecycle, end-to-end collateral damage, and the authorization attack surface.",
+  "private": true,
+  "type": "module",
+  "license": "AGPL-3.0-or-later",
+  "keywords": [
+    "dsh-plugin",
+    "deepseek-harness",
+    "session-delete",
+    "safety",
+    "security",
+    "agpl"
+  ],
+  "homepage": "https://github.com/SteindelSE/dsh-plugin-safe-session-delete",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SteindelSE/dsh-plugin-safe-session-delete.git"
+  },
+  "bugs": {
+    "url": "https://github.com/SteindelSE/dsh-plugin-safe-session-delete/issues"
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node --test tests/"
+  },
+  "files": [
+    "src/",
+    "build.mjs",
+    "cordis.patch.yml",
+    "README.md",
+    "SECURITY.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./client": "./src/client.js",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime"
+      ],
+      "platform": "web"
+    }
+  },
+  "peerDependencies": {
+    "@deepseek-ai/dsh-tools": "0.2.0-rc.2"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
+  }
+}
